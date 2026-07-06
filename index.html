@@ -57,7 +57,7 @@
             min-width: 0;
         }
         .right-panel {
-            width: 400px;
+            width: 420px;
             flex-shrink: 0;
         }
 
@@ -207,13 +207,8 @@
             animation: pulse 1s infinite;
         }
         @keyframes pulse {
-            0%,
-            100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         .right-panel {
@@ -399,7 +394,62 @@
             width: 0%;
         }
 
-        /* ===== TABLA DE VERDAD (modal resumida) ===== */
+        /* ===== NUEVO: explicación detallada ===== */
+        .detail-box {
+            background: #0f0f1f;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #2a3a5e;
+            margin-top: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #c0c0d0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .detail-box .bit-line {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .detail-box .bit-line .label {
+            color: #88aacc;
+            min-width: 60px;
+        }
+        .detail-box .bit-line .value {
+            font-weight: bold;
+        }
+        .detail-box .carry-info {
+            color: #ffaa44;
+        }
+        .detail-box .flag-info {
+            color: #66ccff;
+        }
+
+        /* ===== Selector NOT ===== */
+        .not-selector {
+            display: none;
+            margin-top: 5px;
+            gap: 10px;
+            align-items: center;
+        }
+        .not-selector.visible {
+            display: flex;
+        }
+        .not-selector label {
+            font-size: 12px;
+            color: #88aacc;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+        .not-selector input[type="radio"] {
+            accent-color: #00ff88;
+        }
+
+        /* ===== TABLA DE VERDAD (modal) ===== */
         .truth-table-overlay {
             display: none;
             position: fixed;
@@ -471,7 +521,7 @@
             font-weight: bold;
         }
 
-        /* ===== TABLA COMPLETA (256 filas) ===== */
+        /* ===== TABLA COMPLETA ===== */
         #fullTableContainer {
             background: #0f0f1f;
             border-radius: 8px;
@@ -645,8 +695,13 @@
                         <div class="bit-group" id="bBits"></div>
                     </div>
                     <div class="control-group">
-                        <label>🟠 SEL (3 bits)</label>
+                        <label>🟠 SEL (4 bits)</label>
                         <div class="bit-group" id="selBits"></div>
+                        <!-- Selector para NOT -->
+                        <div class="not-selector" id="notSelector">
+                            <label><input type="radio" name="notSource" value="A" checked> NOT A</label>
+                            <label><input type="radio" name="notSource" value="B"> NOT B</label>
+                        </div>
                     </div>
                     <div class="control-group" style="flex:1; min-width:180px;">
                         <label>🎮 Controles</label>
@@ -676,6 +731,10 @@
                             <div class="result-decimal" id="resultUnsigned">0</div>
                             <div class="result-decimal signed" id="resultSigned">0 (con signo)</div>
                         </div>
+                    </div>
+                    <!-- NUEVO: Explicación detallada del resultado -->
+                    <div class="detail-box" id="detailExplanation">
+                        <span style="color:#88aacc;">Cambia las entradas para ver el proceso detallado...</span>
                     </div>
                 </div>
 
@@ -794,18 +853,13 @@
             }
             compute(aBits, bBits, cin = 0) {
                 this.reset();
-                // Invertir para que el índice 0 sea el bit más significativo (MSB)
                 const aRev = [...aBits].reverse();
                 const bRev = [...bBits].reverse();
                 let carry = cin;
                 const result = [0, 0, 0, 0];
                 for (let i = 0; i < 4; i++) {
                     const [sumBit, carryOut] = this.adders[i].compute(aRev[i], bRev[i], carry);
-                    // Guardamos en orden MSB -> LSB
                     result[3 - i] = sumBit;
-                    // carryChain[3-i] guarda el acarreo de salida del bit i
-                    // OJO: carryChain[0] = acarreo del bit menos significativo (LSB)
-                    // carryChain[3] = acarreo del bit más significativo (MSB)
                     this.carryChain[3 - i] = carryOut;
                     carry = carryOut;
                 }
@@ -819,7 +873,7 @@
         }
 
         // ================================================================
-        // 4. ALU 4 BITS (CORREGIDA - OVERFLOW FIX)
+        // 4. ALU 4 BITS (con soporte para NOT A o NOT B)
         // ================================================================
         class ALU4Bit {
             constructor() {
@@ -836,7 +890,7 @@
                 this.adder = new Adder4Bit();
                 this.aBits = [0, 0, 0, 0];
                 this.bBits = [0, 0, 0, 0];
-                this.select = [0, 0, 0];
+                this.select = [0, 0, 0, 0];
                 this.result = [0, 0, 0, 0];
                 this.carry = 0;
                 this.overflow = 0;
@@ -848,28 +902,41 @@
                 this.allResults = [];
                 this.lastSumCarry = 0;
                 this.lastSubCarry = 0;
+                this.notSource = 'A'; // 'A' o 'B'
             }
 
-            setInputs(aBits, bBits, select) {
+            setInputs(aBits, bBits, select, notSource = 'A') {
                 this.aBits = [...aBits];
                 this.bBits = [...bBits];
                 this.select = [...select];
+                this.notSource = notSource;
                 this.steps = [];
             }
 
             compute() {
-                const op = (this.select[0] << 2) | (this.select[1] << 1) | this.select[2];
-                this.allResults = this.computeAllOperations();
+                const op = (this.select[1] << 2) | (this.select[2] << 1) | this.select[3];
+                // Para NOT, elegimos la fuente
+                let aForNot = this.aBits;
+                let bForNot = this.bBits;
+                if (op === 5) { // NOT
+                    if (this.notSource === 'B') {
+                        // Usamos B como entrada y A es ignorado (pero lo pasamos como B para que no influya)
+                        aForNot = this.bBits;
+                        bForNot = this.aBits; // no se usa
+                    } else {
+                        aForNot = this.aBits;
+                        bForNot = this.bBits;
+                    }
+                }
 
-                const idx = (this.select[0] << 2) | (this.select[1] << 1) | this.select[2];
+                this.allResults = this.computeAllOperations(aForNot, bForNot);
+                const idx = op;
                 this.result = (idx >= 0 && idx < this.allResults.length) ? [...this.allResults[idx]] : [0, 0, 0, 0];
 
                 let carryOut = 0,
                     carryInLast = 0;
                 if (idx === 0) {
                     carryOut = this.lastSumCarry;
-                    // 🔥 CORRECCIÓN: El acarreo de entrada al MSB (bit 3) es el acarreo de salida del bit 2.
-                    // En carryChain: carryChain[3] = Cout(MSB), carryChain[2] = Cout(bit2) = Cin(MSB)
                     carryInLast = this.adder.carryChain[2] || 0;
                 } else if (idx === 1) {
                     carryOut = this.lastSubCarry;
@@ -877,7 +944,6 @@
                 }
 
                 this.carry = carryOut;
-                // 🔥 CORRECCIÓN: V = Cin(MSB) XOR Cout(MSB)
                 this.overflow = carryInLast ^ carryOut;
                 this.zero = this.result.every(b => b === 0) ? 1 : 0;
                 this.negative = this.result[0] || 0;
@@ -895,14 +961,14 @@
                 }];
             }
 
-            computeAllOperations() {
+            computeAllOperations(aForNot, bForNot) {
                 const results = [];
-                // SUMA (cin=0)
+                // SUMA (usa aBits y bBits originales)
                 const [sumRes, sumCarry] = this.adder.compute(this.aBits, this.bBits, 0);
                 this.lastSumCarry = sumCarry;
                 results.push([...sumRes]);
 
-                // RESTA (cin=1, B invertido)
+                // RESTA
                 const bNot = this.bBits.map(b => LogicGates.NOT(b));
                 const [subRes, subCarry] = this.adder.compute(this.aBits, bNot, 1);
                 this.lastSubCarry = subCarry;
@@ -914,8 +980,8 @@
                 results.push(this.aBits.map((a, i) => LogicGates.OR(a, this.bBits[i])));
                 // XOR
                 results.push(this.aBits.map((a, i) => LogicGates.XOR(a, this.bBits[i])));
-                // NOT
-                results.push(this.aBits.map(a => LogicGates.NOT(a)));
+                // NOT (usamos la fuente elegida)
+                results.push(aForNot.map(a => LogicGates.NOT(a)));
                 // NAND
                 results.push(this.aBits.map((a, i) => LogicGates.NAND(a, this.bBits[i])));
                 // NOR
@@ -930,6 +996,9 @@
                 steps.push(`Operación: ${opName}`);
                 steps.push(`A = ${this.aBits.join('')} (${this.toUnsigned(this.aBits)})`);
                 steps.push(`B = ${this.bBits.join('')} (${this.toUnsigned(this.bBits)})`);
+                if (op === 5) {
+                    steps.push(`Fuente NOT: ${this.notSource}`);
+                }
                 steps.push('');
 
                 if (op === 0b000 || op === 0b001) {
@@ -947,12 +1016,23 @@
                     steps.push(`Resultado: ${this.result.join('')} = ${this.unsigned} (sin signo) / ${this.signed} (con signo)`);
                     if (this.carry) steps.push('⚠️ Carry activado (desbordamiento sin signo)');
                     if (this.overflow) steps.push('⚠️ Overflow activado (desbordamiento con signo)');
+                } else if (op === 5) {
+                    // NOT
+                    const source = this.notSource === 'A' ? this.aBits : this.bBits;
+                    const label = this.notSource === 'A' ? 'A' : 'B';
+                    for (let i = 0; i < 4; i++) {
+                        const val = source[i];
+                        const res = this.result[i];
+                        steps.push(`Bit ${3-i}: NOT(${val}) = ${res}`);
+                    }
+                    steps.push('');
+                    steps.push(`Resultado: ${this.result.join('')} = ${this.unsigned} (sin signo) / ${this.signed} (con signo)`);
                 } else {
-                    const opSymbols = { 2: 'AND', 3: 'OR', 4: 'XOR', 5: 'NOT', 6: 'NAND', 7: 'NOR' };
+                    const opSymbols = { 2: 'AND', 3: 'OR', 4: 'XOR', 6: 'NAND', 7: 'NOR' };
                     const sym = opSymbols[op] || '?';
                     for (let i = 0; i < 4; i++) {
                         const a = this.aBits[i];
-                        const b = (op === 5) ? '-' : this.bBits[i];
+                        const b = this.bBits[i];
                         const r = this.result[i];
                         steps.push(`Bit ${3-i}: ${a} ${sym} ${b} = ${r}`);
                     }
@@ -971,7 +1051,7 @@
             }
 
             getOperationName() {
-                const op = (this.select[0] << 2) | (this.select[1] << 1) | this.select[2];
+                const op = (this.select[1] << 2) | (this.select[2] << 1) | this.select[3];
                 return this.OP_NAMES[op] || 'DESCONOCIDA';
             }
             getSteps() { return this.steps; }
@@ -1021,7 +1101,7 @@
             { op: 'AND', expr: 'S = A · B' },
             { op: 'OR', expr: 'S = A + B' },
             { op: 'XOR', expr: 'S = A ⊕ B' },
-            { op: 'NOT', expr: 'S = ¬A' },
+            { op: 'NOT', expr: 'S = ¬A  (o ¬B según selección)' },
             { op: 'NAND', expr: 'S = ¬(A · B)' },
             { op: 'NOR', expr: 'S = ¬(A + B)' }
         ];
@@ -1037,13 +1117,14 @@
 
                 this.aBits = [0, 0, 0, 0];
                 this.bBits = [0, 0, 0, 0];
-                this.selBits = [0, 0, 0];
+                this.selBits = [0, 0, 0, 0];
                 this.result = [0, 0, 0, 0];
                 this.flags = { carry: 0, overflow: 0, zero: 0, negative: 0, unsigned: 0, signed: 0 };
 
                 this.animating = false;
                 this.animationTimer = null;
                 this.currentOp = 0;
+                this.notSource = 'A'; // 'A' o 'B'
 
                 this.initUI();
                 this.updateCircuit();
@@ -1089,22 +1170,34 @@
                 }
 
                 const selContainer = document.getElementById('selBits');
-                for (let i = 0; i < 3; i++) {
+                for (let i = 0; i < 4; i++) {
                     const div = document.createElement('div');
                     div.className = 'bit-toggle';
                     div.innerHTML = `
                         <input type="checkbox" id="sel${i}">
                         <label class="switch off" for="sel${i}">0</label>
-                        <span class="bit-label">S${2-i}</span>
+                        <span class="bit-label">S${3-i}</span>
                     `;
                     const input = div.querySelector('input');
                     input.addEventListener('change', () => {
-                        this.selBits[2 - i] = input.checked ? 1 : 0;
-                        this.updateBitDisplay('sel', 2 - i);
+                        this.selBits[3 - i] = input.checked ? 1 : 0;
+                        this.updateBitDisplay('sel', 3 - i);
                         this.updateCircuit();
                     });
                     selContainer.appendChild(div);
                 }
+
+                // Selector NOT
+                const notSelector = document.getElementById('notSelector');
+                const radios = notSelector.querySelectorAll('input[name="notSource"]');
+                radios.forEach(r => {
+                    r.addEventListener('change', () => {
+                        if (r.checked) {
+                            this.notSource = r.value;
+                            this.updateCircuit();
+                        }
+                    });
+                });
 
                 const resultContainer = document.getElementById('resultBits');
                 for (let i = 0; i < 4; i++) {
@@ -1137,8 +1230,6 @@
                 document.getElementById('btnExport').addEventListener('click', () => this.exportCanvas());
                 document.getElementById('btnReset').addEventListener('click', () => this.resetAll());
                 document.getElementById('btnTruthTable').addEventListener('click', () => this.showTruthTable());
-
-                // Botón para tabla completa
                 document.getElementById('btnFullTable').addEventListener('click', () => this.generarTablaCompleta());
 
                 document.getElementById('closeTruthTable').addEventListener('click', () => {
@@ -1160,7 +1251,7 @@
                 const prefix = type === 'a' ? 'a' : type === 'b' ? 'b' : 'sel';
                 const container = document.getElementById(`${prefix}Bits`);
                 const items = container.querySelectorAll('.bit-toggle');
-                const realIndex = type === 'a' ? 3 - index : type === 'b' ? 3 - index : 2 - index;
+                const realIndex = type === 'a' ? 3 - index : type === 'b' ? 3 - index : 3 - index;
                 const item = items[realIndex];
                 const input = item.querySelector('input');
                 const label = item.querySelector('.switch');
@@ -1172,11 +1263,20 @@
             }
 
             updateCircuit() {
-                this.alu.setInputs(this.aBits, this.bBits, this.selBits);
+                // Verificar si la operación es NOT para mostrar el selector
+                const op = (this.selBits[1] << 2) | (this.selBits[2] << 1) | this.selBits[3];
+                const notSelector = document.getElementById('notSelector');
+                if (op === 5) {
+                    notSelector.classList.add('visible');
+                } else {
+                    notSelector.classList.remove('visible');
+                }
+
+                this.alu.setInputs(this.aBits, this.bBits, this.selBits, this.notSource);
                 const [result, flags] = this.alu.compute();
                 this.result = result;
                 this.flags = flags;
-                this.currentOp = (this.selBits[0] << 2) | (this.selBits[1] << 1) | this.selBits[2];
+                this.currentOp = op;
 
                 for (let i = 0; i < 4; i++) {
                     const el = document.getElementById(`resultBit${i}`);
@@ -1196,6 +1296,7 @@
                 }
 
                 this.updateExplanation();
+                this.updateDetailExplanation();
                 this.drawCircuit();
             }
 
@@ -1226,6 +1327,85 @@
                 const totalSteps = steps ? steps.filter(s => s.includes('Bit') || s.includes('Resultado:')).length : 0;
                 const pct = Math.min(100, totalSteps * 10);
                 progress.style.width = `${pct}%`;
+            }
+
+            // NUEVO: Explicación detallada del resultado
+            updateDetailExplanation() {
+                const container = document.getElementById('detailExplanation');
+                const op = this.currentOp;
+                const opName = this.alu.getOperationName();
+                let html = `<div style="color:#88aacc; margin-bottom:4px;">🔍 <b>Proceso detallado</b> (${opName})</div>`;
+
+                if (op === 0 || op === 1) {
+                    // Suma o resta
+                    const states = this.alu.getAdderStates();
+                    const carryChain = this.alu.adder.carryChain;
+                    html += `<div style="display:flex; flex-direction:column; gap:2px;">`;
+                    for (let i = 0; i < 4; i++) {
+                        const s = states[3 - i];
+                        const cin = (i < 3) ? carryChain[i + 1] : (op === 1 ? 1 : 0);
+                        const cout = carryChain[i];
+                        const a = this.aBits[i];
+                        const b = this.bBits[i];
+                        const sum = this.result[i];
+                        html += `<div class="bit-line">
+                            <span class="label">Bit ${3-i}:</span>
+                            <span>${a} + ${b} + ${cin} = <span class="value" style="color:#00ff88;">${sum}</span></span>
+                            <span class="carry-info">(Acarreo salida: ${cout})</span>
+                        </div>`;
+                    }
+                    html += `</div>`;
+                    html += `<div style="margin-top:4px; color:#ffaa44;">Resultado binario: <b>${this.result.join('')}</b> = ${this.flags.unsigned} (sin signo) / ${this.flags.signed} (con signo)</div>`;
+                    if (this.flags.carry) html += `<div style="color:#ff6666;">⚠️ Carry = 1 (desbordamiento sin signo)</div>`;
+                    if (this.flags.overflow) html += `<div style="color:#ff8800;">⚠️ Overflow = 1 (desbordamiento con signo)</div>`;
+                } else if (op === 5) {
+                    // NOT
+                    const source = this.notSource === 'A' ? this.aBits : this.bBits;
+                    const label = this.notSource === 'A' ? 'A' : 'B';
+                    html += `<div style="display:flex; flex-direction:column; gap:2px;">`;
+                    for (let i = 0; i < 4; i++) {
+                        const val = source[i];
+                        const res = this.result[i];
+                        html += `<div class="bit-line">
+                            <span class="label">Bit ${3-i}:</span>
+                            <span>NOT(${val}) = <span class="value" style="color:#00ff88;">${res}</span></span>
+                        </div>`;
+                    }
+                    html += `</div>`;
+                    html += `<div style="margin-top:4px; color:#ffaa44;">Resultado: <b>${this.result.join('')}</b> = ${this.flags.unsigned} (sin signo) / ${this.flags.signed} (con signo)</div>`;
+                } else {
+                    // Lógicas AND, OR, XOR, NAND, NOR
+                    const opSymbols = { 2: 'AND', 3: 'OR', 4: 'XOR', 6: 'NAND', 7: 'NOR' };
+                    const sym = opSymbols[op] || '?';
+                    html += `<div style="display:flex; flex-direction:column; gap:2px;">`;
+                    for (let i = 0; i < 4; i++) {
+                        const a = this.aBits[i];
+                        const b = this.bBits[i];
+                        const r = this.result[i];
+                        html += `<div class="bit-line">
+                            <span class="label">Bit ${3-i}:</span>
+                            <span>${a} ${sym} ${b} = <span class="value" style="color:#00ff88;">${r}</span></span>
+                        </div>`;
+                    }
+                    html += `</div>`;
+                    html += `<div style="margin-top:4px; color:#ffaa44;">Resultado: <b>${this.result.join('')}</b> = ${this.flags.unsigned} (sin signo) / ${this.flags.signed} (con signo)</div>`;
+                }
+
+                // Mostrar flags resumidos
+                html += `<div style="margin-top:6px; display:flex; gap:12px; flex-wrap:wrap;">`;
+                const flagLabels = [
+                    { key: 'carry', label: 'C', color: '#ff4444' },
+                    { key: 'overflow', label: 'V', color: '#ff8800' },
+                    { key: 'zero', label: 'Z', color: '#44ff44' },
+                    { key: 'negative', label: 'N', color: '#4488ff' }
+                ];
+                for (const f of flagLabels) {
+                    const val = this.flags[f.key];
+                    html += `<span style="color:${f.color};">${f.label}=${val}</span>`;
+                }
+                html += `</div>`;
+
+                container.innerHTML = html;
             }
 
             renderFormulas() {
@@ -1266,9 +1446,6 @@
                 document.getElementById('truthTableOverlay').classList.add('active');
             }
 
-            // ============================================================
-            // TABLA COMPLETA (256 COMBINACIONES) - CORREGIDA
-            // ============================================================
             generarTablaCompleta() {
                 const container = document.getElementById('fullTableContainer');
                 const content = document.getElementById('fullTableContent');
@@ -1276,9 +1453,9 @@
                 container.style.display = 'block';
 
                 let html = '<table>';
-                // Cabecera
                 html += `<thead>
                     <tr>
+                        <th style="color:#ff8800;">SEL</th>
                         <th>A</th>
                         <th>B</th>
                         <th style="color:#00ff88;">SUMA</th>
@@ -1298,31 +1475,27 @@
                     </tr>
                 </thead><tbody>`;
 
+                const selValue = '0000';
+
                 for (let a = 0; a < 16; a++) {
                     for (let b = 0; b < 16; b++) {
                         const aBin = a.toString(2).padStart(4, '0');
                         const bBin = b.toString(2).padStart(4, '0');
 
-                        // --- SUMA ---
                         const suma = (a + b) & 0xF;
                         const sumaBin = suma.toString(2).padStart(4, '0');
                         const carrySum = (a + b) >> 4;
-                        // Overflow SUMA: (A+ y B+ dan -) o (A- y B- dan +)
                         const overflowSum = (((a & 0x8) && (b & 0x8) && !(suma & 0x8)) || (!(a & 0x8) && !(b & 0x8) && (suma & 0x8))) ? 1 : 0;
                         const zeroSum = (suma === 0) ? 1 : 0;
                         const negSum = (suma & 0x8) ? 1 : 0;
 
-                        // --- RESTA ---
                         const resta = (a - b + 16) & 0xF;
                         const restaBin = resta.toString(2).padStart(4, '0');
-                        // Carry en resta: 1 si A >= B, 0 si A < B (sin borrow)
                         const carryRest = (a >= b) ? 1 : 0;
-                        // Overflow RESTA: (A+ y B- dan -) o (A- y B+ dan +)
                         const overflowRest = (((a & 0x8) && !(b & 0x8) && !(resta & 0x8)) || (!(a & 0x8) && (b & 0x8) && (resta & 0x8))) ? 1 : 0;
                         const zeroRest = (resta === 0) ? 1 : 0;
                         const negRest = (resta & 0x8) ? 1 : 0;
 
-                        // Lógicas
                         const andVal = a & b;
                         const orVal = a | b;
                         const xorVal = a ^ b;
@@ -1336,6 +1509,7 @@
                         const rowBg = (carrySum === 1) ? ' style="background:#2a1a1a;"' : '';
 
                         html += `<tr${rowBg}>
+                            <td style="color:#ff8800;">${selValue}</td>
                             <td>${aBin}</td>
                             <td>${bBin}</td>
                             <td style="color:#00ff88;">${sumaBin}</td>
@@ -1831,17 +2005,21 @@
                 if (this.animating) this.toggleAnimation();
                 this.aBits = [0, 0, 0, 0];
                 this.bBits = [0, 0, 0, 0];
-                this.selBits = [0, 0, 0];
+                this.selBits = [0, 0, 0, 0];
+                this.notSource = 'A';
+                document.querySelector('input[name="notSource"][value="A"]').checked = true;
                 for (let i = 0; i < 4; i++) {
                     this.updateBitDisplay('a', i);
                     this.updateBitDisplay('b', i);
-                    if (i < 3) this.updateBitDisplay('sel', i);
+                    this.updateBitDisplay('sel', i);
                 }
                 this.result = [0, 0, 0, 0];
                 this.flags = { carry: 0, overflow: 0, zero: 0, negative: 0, unsigned: 0, signed: 0 };
                 this.updateCircuit();
                 document.getElementById('explanationContent').innerHTML = '🔄 Sistema reiniciado.';
                 document.getElementById('progressFill').style.width = '0%';
+                document.getElementById('detailExplanation').innerHTML = '<span style="color:#88aacc;">Reiniciado.</span>';
+                document.getElementById('notSelector').classList.remove('visible');
             }
 
             // ============================================================
@@ -1857,7 +2035,7 @@
                 if (x > 35 && x < 180) {
                     if (y > 32 && y < 55) { text = '🔵 Entrada A: Bits A3-A0';
                         found = true; } else if (y > 97 && y < 120) { text = '🟢 Entrada B: Bits B3-B0';
-                        found = true; } else if (y > 162 && y < 185) { text = '🟠 Selector: SEL2-SEL0 (3 bits)';
+                        found = true; } else if (y > 162 && y < 185) { text = '🟠 Selector: S3-S0 (4 bits)';
                         found = true; }
                 }
                 if (x > 150 && x < 280 && y > 20 && y < 80) { text = '📐 Sumador RCA de 4 bits con acarreo';
