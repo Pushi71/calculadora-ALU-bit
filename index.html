@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALU 4 bits - Simulador Visual</title>
+    <style>
+        /* ===== ESTILOS GLOBALES ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 1500px;
+            max-width: 100%;
+            background: #111128;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+            border: 1px solid #2a3a5e;
+        }
+        .title {
+            text-align: center;
+            color: #00ff88;
+            font-size: 28px;
+            font-weight: bold;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2a3a5e;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
+        }
+        .title small {
+            font-size: 14px;
+            color: #88aacc;
+            display: block;
+            margin-top: 5px;
+            font-weight: normal;
+        }
+
+        .main-layout {
+            display: flex;
+            gap: 20px;
+        }
+        .left-panel {
+            flex: 1;
+            min-width: 0;
+        }
+        .right-panel {
+            width: 400px;
+            flex-shrink: 0;
+        }
+
+        .canvas-container {
+            background: #0a0a18;
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid #2a3a5e;
+            position: relative;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #0a0a18;
+            border-radius: 8px;
+            cursor: default;
+        }
+
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 15px 0 0 0;
+            align-items: center;
+        }
+        .control-group {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 10px 15px;
+            border: 1px solid #2a3a5e;
+        }
+        .control-group label {
+            display: block;
+            font-size: 11px;
+            color: #88aacc;
+            margin-bottom: 5px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .bit-group {
+            display: flex;
+            gap: 6px;
+        }
+        .bit-toggle {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .bit-toggle input[type="checkbox"] {
+            display: none;
+        }
+        .bit-toggle .switch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #444466;
+            background: #333355;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+            color: #666;
+            user-select: none;
+        }
+        .bit-toggle .switch:hover {
+            transform: scale(1.1);
+        }
+        .bit-toggle .switch.on {
+            background: #00ff88;
+            border-color: #00ff88;
+            color: #0a0a18;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.3);
+        }
+        .bit-toggle .switch.off {
+            background: #333355;
+            border-color: #444466;
+            color: #666;
+        }
+        .bit-toggle .bit-label {
+            font-size: 9px;
+            color: #88aacc;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 7px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+        }
+        .btn:active {
+            transform: translateY(0px);
+        }
+        .btn-primary {
+            background: #0066aa;
+        }
+        .btn-primary:hover {
+            background: #0077cc;
+        }
+        .btn-success {
+            background: #228822;
+        }
+        .btn-success:hover {
+            background: #33aa33;
+        }
+        .btn-danger {
+            background: #aa2244;
+        }
+        .btn-danger:hover {
+            background: #cc3355;
+        }
+        .btn-purple {
+            background: #6644aa;
+        }
+        .btn-purple:hover {
+            background: #8855cc;
+        }
+        .btn-animate {
+            background: #006666;
+        }
+        .btn-animate:hover {
+            background: #008888;
+        }
+        .btn-animate.active {
+            background: #cc4444;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .panel-box {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid #2a3a5e;
+        }
+        .panel-box h3 {
+            color: #00ff88;
+            font-size: 13px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result-display {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .result-bits {
+            display: flex;
+            gap: 6px;
+        }
+        .result-bit {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid #444466;
+            transition: all 0.3s ease;
+        }
+        .result-bit.on {
+            background: #00ff88;
+            border-color: #00ff88;
+            color: #0a0a18;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.2);
+        }
+        .result-bit.off {
+            background: #333355;
+            border-color: #444466;
+            color: #666;
+        }
+        .result-values {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .result-decimal {
+            font-size: 18px;
+            color: #ffff00;
+            font-weight: bold;
+            padding: 2px 15px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            border: 1px solid #444466;
+            text-align: center;
+        }
+        .result-decimal.signed {
+            font-size: 14px;
+            color: #88aacc;
+            border-color: #2a3a5e;
+        }
+
+        .flags-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .flag-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 10px;
+            background: #0f0f1f;
+            border-radius: 6px;
+            border: 1px solid #2a3a5e;
+        }
+        .flag-item .flag-name {
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 55px;
+        }
+        .flag-item .flag-status {
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .flag-item .flag-status.on {
+            background: #00ff88;
+            color: #0a0a18;
+        }
+        .flag-item .flag-status.off {
+            background: #333355;
+            color: #666;
+        }
+
+        .formulas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+        }
+        .formula-item {
+            background: #0f0f1f;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #2a3a5e;
+        }
+        .formula-item .op {
+            color: #ffaa44;
+            font-weight: bold;
+        }
+        .formula-item .expr {
+            color: #88aacc;
+        }
+
+        .explanation-box {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .explanation-box::-webkit-scrollbar {
+            width: 4px;
+        }
+        .explanation-box::-webkit-scrollbar-track {
+            background: #0f0f1f;
+            border-radius: 3px;
+        }
+        .explanation-box::-webkit-scrollbar-thumb {
+            background: #2a3a5e;
+            border-radius: 3px;
+        }
+        .explanation-content {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            color: #c0c0d0;
+        }
+        .explanation-content .highlight {
+            color: #ffff00;
+        }
+        .explanation-content .success {
+            color: #00ff88;
+        }
+        .explanation-content .info {
+            color: #66ccff;
+        }
+        .explanation-content .error {
+            color: #ff6666;
+        }
+        .explanation-content .step {
+            color: #ffaa66;
+        }
+
+        .progress-bar {
+            height: 3px;
+            background: #2a3a5e;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-bar .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00ccff);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        /* ===== TABLA DE VERDAD (modal resumida) ===== */
+        .truth-table-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .truth-table-overlay.active {
+            display: flex;
+        }
+        .truth-table-modal {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 25px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid #2a3a5e;
+            position: relative;
+        }
+        .truth-table-modal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #ff6666;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .truth-table-modal h3 {
+            color: #00ff88;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .truth-table-modal table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .truth-table-modal th {
+            background: #2a3a5e;
+            color: #00ff88;
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #3a4a6e;
+        }
+        .truth-table-modal td {
+            padding: 6px 8px;
+            text-align: center;
+            border: 1px solid #2a3a5e;
+            font-family: 'Courier New', monospace;
+        }
+        .truth-table-modal tr:nth-child(even) {
+            background: #0f0f1f;
+        }
+        .truth-table-modal tr:hover {
+            background: #1a2a3e;
+        }
+        .truth-table-modal .carry-indicator {
+            color: #ff6666;
+            font-weight: bold;
+        }
+
+        /* ===== TABLA COMPLETA (256 filas) ===== */
+        #fullTableContainer {
+            background: #0f0f1f;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #2a3a5e;
+            max-height: 600px;
+            overflow-y: auto;
+            margin-top: 15px;
+            display: none;
+        }
+        #fullTableContainer::-webkit-scrollbar {
+            width: 6px;
+        }
+        #fullTableContainer::-webkit-scrollbar-track {
+            background: #0f0f1f;
+            border-radius: 3px;
+        }
+        #fullTableContainer::-webkit-scrollbar-thumb {
+            background: #2a3a5e;
+            border-radius: 3px;
+        }
+        #fullTableContainer h4 {
+            color: #00ff88;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        #fullTableContainer table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        #fullTableContainer th {
+            background: #2a3a5e;
+            color: #00ff88;
+            padding: 4px 5px;
+            text-align: center;
+            border: 1px solid #3a4a6e;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        #fullTableContainer td {
+            padding: 2px 4px;
+            text-align: center;
+            border: 1px solid #2a3a5e;
+            color: #c0c0d0;
+        }
+        #fullTableContainer tr:nth-child(even) {
+            background: #0a0a18;
+        }
+        #fullTableContainer tr:hover {
+            background: #1a2a3e;
+        }
+
+        @media (max-width: 1100px) {
+            .main-layout {
+                flex-direction: column;
+            }
+            .right-panel {
+                width: 100%;
+            }
+            .control-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .control-group {
+                width: 100%;
+            }
+            .bit-group {
+                justify-content: center;
+            }
+            .button-group {
+                justify-content: center;
+            }
+            .truth-table-modal {
+                max-width: 100%;
+                padding: 15px;
+            }
+            .truth-table-modal table {
+                font-size: 11px;
+            }
+            .truth-table-modal th,
+            .truth-table-modal td {
+                padding: 4px 5px;
+            }
+            .formulas-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            #fullTableContainer table {
+                font-size: 8px;
+            }
+            #fullTableContainer th,
+            #fullTableContainer td {
+                padding: 2px 3px;
+            }
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+            }
+            .title {
+                font-size: 20px;
+            }
+            .result-bits {
+                gap: 4px;
+            }
+            .result-bit {
+                width: 28px;
+                height: 28px;
+                font-size: 14px;
+            }
+            .result-decimal {
+                font-size: 16px;
+                padding: 3px 10px;
+            }
+            .truth-table-modal table {
+                font-size: 9px;
+            }
+            .truth-table-modal th,
+            .truth-table-modal td {
+                padding: 3px 4px;
+            }
+            .formulas-grid {
+                grid-template-columns: 1fr;
+            }
+            #fullTableContainer table {
+                font-size: 7px;
+            }
+            #fullTableContainer th,
+            #fullTableContainer td {
+                padding: 1px 2px;
+            }
+        }
+
+        .tooltip {
+            position: fixed;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid #2a3a5e;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="title">
+            ⚡ ALU de 4 bits — Diseño Lógico Visual
+            <small>Sumador, Restador, Compuertas Lógicas y Banderas</small>
+        </div>
+
+        <div class="main-layout">
+            <div class="left-panel">
+                <div class="canvas-container">
+                    <canvas id="circuitCanvas" width="850" height="520"></canvas>
+                </div>
+                <div class="control-panel">
+                    <div class="control-group">
+                        <label>🔵 A (4 bits)</label>
+                        <div class="bit-group" id="aBits"></div>
+                    </div>
+                    <div class="control-group">
+                        <label>🟢 B (4 bits)</label>
+                        <div class="bit-group" id="bBits"></div>
+                    </div>
+                    <div class="control-group">
+                        <label>🟠 SEL (3 bits)</label>
+                        <div class="bit-group" id="selBits"></div>
+                    </div>
+                    <div class="control-group" style="flex:1; min-width:180px;">
+                        <label>🎮 Controles</label>
+                        <div class="button-group">
+                            <button class="btn btn-animate" id="btnAnimate">▶ Animar</button>
+                            <button class="btn btn-primary" id="btnSimulate">⚡ Simular</button>
+                            <button class="btn btn-success" id="btnExport">📷 Exportar</button>
+                            <button class="btn btn-danger" id="btnReset">🔄 Reset</button>
+                            <button class="btn btn-purple" id="btnTruthTable">📋 Tabla</button>
+                            <button class="btn btn-purple" id="btnFullTable" style="background:#8844aa;">📊 Tabla Completa</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Contenedor para la tabla completa -->
+                <div id="fullTableContainer">
+                    <h4>📋 Tabla de Verdad Completa (256 combinaciones)</h4>
+                    <div id="fullTableContent"></div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="panel-box">
+                    <h3>📊 Resultado</h3>
+                    <div class="result-display">
+                        <div class="result-bits" id="resultBits"></div>
+                        <div class="result-values">
+                            <div class="result-decimal" id="resultUnsigned">0</div>
+                            <div class="result-decimal signed" id="resultSigned">0 (con signo)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-box">
+                    <h3>🚩 Banderas (Flags)</h3>
+                    <div class="flags-grid" id="flagsContainer"></div>
+                </div>
+
+                <div class="panel-box">
+                    <h3>📐 Fórmulas de Operaciones</h3>
+                    <div class="formulas-grid" id="formulasContainer"></div>
+                </div>
+
+                <div class="panel-box" style="flex:1;">
+                    <h3>📖 Explicación</h3>
+                    <div class="explanation-box">
+                        <div class="explanation-content" id="explanationContent">
+                            Cambia las entradas para ver la explicación...
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLA DE VERDAD RESUMIDA (modal) -->
+    <div class="truth-table-overlay" id="truthTableOverlay">
+        <div class="truth-table-modal">
+            <button class="close-btn" id="closeTruthTable">✕</button>
+            <h3>📋 Tabla de Verdad — ALU 4 bits (16 ejemplos)</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>A</th>
+                            <th>B</th>
+                            <th>Suma (A+B)</th>
+                            <th>Resta (A-B)</th>
+                            <th>AND</th>
+                            <th>OR</th>
+                            <th>XOR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="truthTableBody"></tbody>
+                </table>
+            </div>
+            <div style="margin-top:12px; font-size:12px; color:#88aacc; text-align:center;">
+                ✅ Resultados verificados con la ALU de 4 bits
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // ================================================================
+        // 1. LÓGICA DE COMPUERTAS
+        // ================================================================
+        class LogicGates {
+            static AND(a, b) { return (a === 1 && b === 1) ? 1 : 0; }
+            static OR(a, b) { return (a === 1 || b === 1) ? 1 : 0; }
+            static NOT(a) { return a === 0 ? 1 : 0; }
+            static XOR(a, b) { return a !== b ? 1 : 0; }
+            static NAND(a, b) { return (a === 1 && b === 1) ? 0 : 1; }
+            static NOR(a, b) { return (a === 0 && b === 0) ? 1 : 0; }
+        }
+
+        // ================================================================
+        // 2. FULL ADDER (1 bit)
+        // ================================================================
+        class FullAdder {
+            constructor() {
+                this.a = 0;
+                this.b = 0;
+                this.cin = 0;
+                this.sum = 0;
+                this.cout = 0;
+            }
+            compute(a, b, cin) {
+                this.a = a;
+                this.b = b;
+                this.cin = cin;
+                const xor1 = LogicGates.XOR(a, b);
+                this.sum = LogicGates.XOR(xor1, cin);
+                this.cout = LogicGates.OR(LogicGates.AND(a, b), LogicGates.AND(xor1, cin));
+                return [this.sum, this.cout];
+            }
+            reset() {
+                this.a = 0;
+                this.b = 0;
+                this.cin = 0;
+                this.sum = 0;
+                this.cout = 0;
+            }
+        }
+
+        // ================================================================
+        // 3. ADDER 4 BITS (RCA)
+        // ================================================================
+        class Adder4Bit {
+            constructor() {
+                this.adders = [];
+                for (let i = 0; i < 4; i++) this.adders.push(new FullAdder());
+                this.result = [0, 0, 0, 0];
+                this.carryOut = 0;
+                this.carryChain = [0, 0, 0, 0];
+            }
+            reset() {
+                for (let i = 0; i < 4; i++) this.adders[i].reset();
+                this.result = [0, 0, 0, 0];
+                this.carryOut = 0;
+                this.carryChain = [0, 0, 0, 0];
+            }
+            compute(aBits, bBits, cin = 0) {
+                this.reset();
+                // Invertir para que el índice 0 sea el bit más significativo (MSB)
+                const aRev = [...aBits].reverse();
+                const bRev = [...bBits].reverse();
+                let carry = cin;
+                const result = [0, 0, 0, 0];
+                for (let i = 0; i < 4; i++) {
+                    const [sumBit, carryOut] = this.adders[i].compute(aRev[i], bRev[i], carry);
+                    // Guardamos en orden MSB -> LSB
+                    result[3 - i] = sumBit;
+                    // carryChain[3-i] guarda el acarreo de salida del bit i
+                    // OJO: carryChain[0] = acarreo del bit menos significativo (LSB)
+                    // carryChain[3] = acarreo del bit más significativo (MSB)
+                    this.carryChain[3 - i] = carryOut;
+                    carry = carryOut;
+                }
+                this.result = result;
+                this.carryOut = carry;
+                return [result, carry];
+            }
+            getAdderStates() {
+                return this.adders.map(a => ({ a: a.a, b: a.b, cin: a.cin, sum: a.sum, cout: a.cout }));
+            }
+        }
+
+        // ================================================================
+        // 4. ALU 4 BITS (CORREGIDA - OVERFLOW FIX)
+        // ================================================================
+        class ALU4Bit {
+            constructor() {
+                this.OP_NAMES = {
+                    0b000: 'SUMA',
+                    0b001: 'RESTA',
+                    0b010: 'AND',
+                    0b011: 'OR',
+                    0b100: 'XOR',
+                    0b101: 'NOT',
+                    0b110: 'NAND',
+                    0b111: 'NOR'
+                };
+                this.adder = new Adder4Bit();
+                this.aBits = [0, 0, 0, 0];
+                this.bBits = [0, 0, 0, 0];
+                this.select = [0, 0, 0];
+                this.result = [0, 0, 0, 0];
+                this.carry = 0;
+                this.overflow = 0;
+                this.zero = 0;
+                this.negative = 0;
+                this.unsigned = 0;
+                this.signed = 0;
+                this.steps = [];
+                this.allResults = [];
+                this.lastSumCarry = 0;
+                this.lastSubCarry = 0;
+            }
+
+            setInputs(aBits, bBits, select) {
+                this.aBits = [...aBits];
+                this.bBits = [...bBits];
+                this.select = [...select];
+                this.steps = [];
+            }
+
+            compute() {
+                const op = (this.select[0] << 2) | (this.select[1] << 1) | this.select[2];
+                this.allResults = this.computeAllOperations();
+
+                const idx = (this.select[0] << 2) | (this.select[1] << 1) | this.select[2];
+                this.result = (idx >= 0 && idx < this.allResults.length) ? [...this.allResults[idx]] : [0, 0, 0, 0];
+
+                let carryOut = 0,
+                    carryInLast = 0;
+                if (idx === 0) {
+                    carryOut = this.lastSumCarry;
+                    // 🔥 CORRECCIÓN: El acarreo de entrada al MSB (bit 3) es el acarreo de salida del bit 2.
+                    // En carryChain: carryChain[3] = Cout(MSB), carryChain[2] = Cout(bit2) = Cin(MSB)
+                    carryInLast = this.adder.carryChain[2] || 0;
+                } else if (idx === 1) {
+                    carryOut = this.lastSubCarry;
+                    carryInLast = this.adder.carryChain[2] || 0;
+                }
+
+                this.carry = carryOut;
+                // 🔥 CORRECCIÓN: V = Cin(MSB) XOR Cout(MSB)
+                this.overflow = carryInLast ^ carryOut;
+                this.zero = this.result.every(b => b === 0) ? 1 : 0;
+                this.negative = this.result[0] || 0;
+                this.unsigned = this.toUnsigned(this.result);
+                this.signed = this.toSigned(this.result);
+
+                this.generateExplanation(op);
+                return [this.result, {
+                    carry: this.carry,
+                    overflow: this.overflow,
+                    zero: this.zero,
+                    negative: this.negative,
+                    unsigned: this.unsigned,
+                    signed: this.signed
+                }];
+            }
+
+            computeAllOperations() {
+                const results = [];
+                // SUMA (cin=0)
+                const [sumRes, sumCarry] = this.adder.compute(this.aBits, this.bBits, 0);
+                this.lastSumCarry = sumCarry;
+                results.push([...sumRes]);
+
+                // RESTA (cin=1, B invertido)
+                const bNot = this.bBits.map(b => LogicGates.NOT(b));
+                const [subRes, subCarry] = this.adder.compute(this.aBits, bNot, 1);
+                this.lastSubCarry = subCarry;
+                results.push([...subRes]);
+
+                // AND
+                results.push(this.aBits.map((a, i) => LogicGates.AND(a, this.bBits[i])));
+                // OR
+                results.push(this.aBits.map((a, i) => LogicGates.OR(a, this.bBits[i])));
+                // XOR
+                results.push(this.aBits.map((a, i) => LogicGates.XOR(a, this.bBits[i])));
+                // NOT
+                results.push(this.aBits.map(a => LogicGates.NOT(a)));
+                // NAND
+                results.push(this.aBits.map((a, i) => LogicGates.NAND(a, this.bBits[i])));
+                // NOR
+                results.push(this.aBits.map((a, i) => LogicGates.NOR(a, this.bBits[i])));
+
+                return results;
+            }
+
+            generateExplanation(op) {
+                const opName = this.OP_NAMES[op] || 'DESCONOCIDA';
+                const steps = [];
+                steps.push(`Operación: ${opName}`);
+                steps.push(`A = ${this.aBits.join('')} (${this.toUnsigned(this.aBits)})`);
+                steps.push(`B = ${this.bBits.join('')} (${this.toUnsigned(this.bBits)})`);
+                steps.push('');
+
+                if (op === 0b000 || op === 0b001) {
+                    const states = this.adder.getAdderStates();
+                    for (let i = 0; i < 4; i++) {
+                        const s = states[3 - i];
+                        const sumBit = this.result[i];
+                        const coutBit = this.adder.carryChain[i];
+                        const aBit = this.aBits[i];
+                        const bBit = this.bBits[i];
+                        const cinBit = (i < 3) ? this.adder.carryChain[i + 1] : (op === 0b001 ? 1 : 0);
+                        steps.push(`Bit ${3-i}: ${aBit} + ${bBit} + ${cinBit} = ${sumBit} (Acarreo: ${coutBit})`);
+                    }
+                    steps.push('');
+                    steps.push(`Resultado: ${this.result.join('')} = ${this.unsigned} (sin signo) / ${this.signed} (con signo)`);
+                    if (this.carry) steps.push('⚠️ Carry activado (desbordamiento sin signo)');
+                    if (this.overflow) steps.push('⚠️ Overflow activado (desbordamiento con signo)');
+                } else {
+                    const opSymbols = { 2: 'AND', 3: 'OR', 4: 'XOR', 5: 'NOT', 6: 'NAND', 7: 'NOR' };
+                    const sym = opSymbols[op] || '?';
+                    for (let i = 0; i < 4; i++) {
+                        const a = this.aBits[i];
+                        const b = (op === 5) ? '-' : this.bBits[i];
+                        const r = this.result[i];
+                        steps.push(`Bit ${3-i}: ${a} ${sym} ${b} = ${r}`);
+                    }
+                    steps.push('');
+                    steps.push(`Resultado: ${this.result.join('')} = ${this.unsigned} (sin signo) / ${this.signed} (con signo)`);
+                }
+
+                steps.push('');
+                steps.push('--- BANDERAS ---');
+                steps.push(`Carry (C): ${this.carry ? 'ON' : 'OFF'} ${this.carry ? '✅' : '❌'}`);
+                steps.push(`Overflow (V): ${this.overflow ? 'ON' : 'OFF'} ${this.overflow ? '✅' : '❌'}`);
+                steps.push(`Zero (Z): ${this.zero ? 'ON' : 'OFF'} ${this.zero ? '✅' : '❌'}`);
+                steps.push(`Negative (N): ${this.negative ? 'ON' : 'OFF'} ${this.negative ? '✅' : '❌'}`);
+
+                this.steps = steps;
+            }
+
+            getOperationName() {
+                const op = (this.select[0] << 2) | (this.select[1] << 1) | this.select[2];
+                return this.OP_NAMES[op] || 'DESCONOCIDA';
+            }
+            getSteps() { return this.steps; }
+            getAdderStates() { return this.adder.getAdderStates(); }
+
+            toUnsigned(bits) {
+                let v = 0;
+                for (let i = 0; i < bits.length; i++) v |= bits[i] << (3 - i);
+                return v;
+            }
+            toSigned(bits) {
+                let v = this.toUnsigned(bits);
+                if (bits[0] === 1) v = v - 16;
+                return v;
+            }
+            getAllResults() { return this.allResults; }
+        }
+
+        // ================================================================
+        // 5. TABLA DE VERDAD RESUMIDA (16 ejemplos)
+        // ================================================================
+        const TRUTH_TABLE = [
+            { a: '0000', b: '0000', suma: '0000', resta: '0000', and: '0000', or: '0000', xor: '0000', carry: 0 },
+            { a: '0001', b: '0001', suma: '0010', resta: '0000', and: '0001', or: '0001', xor: '0000', carry: 0 },
+            { a: '0010', b: '0001', suma: '0011', resta: '0001', and: '0000', or: '0011', xor: '0011', carry: 0 },
+            { a: '0011', b: '0010', suma: '0101', resta: '0001', and: '0010', or: '0011', xor: '0001', carry: 0 },
+            { a: '0100', b: '0011', suma: '0111', resta: '0001', and: '0000', or: '0111', xor: '0111', carry: 0 },
+            { a: '0101', b: '0101', suma: '1010', resta: '0000', and: '0101', or: '0101', xor: '0000', carry: 0 },
+            { a: '0110', b: '0011', suma: '1001', resta: '0011', and: '0010', or: '0111', xor: '0101', carry: 0 },
+            { a: '0111', b: '0001', suma: '1000', resta: '0110', and: '0001', or: '0111', xor: '0110', carry: 0 },
+            { a: '1000', b: '0001', suma: '1001', resta: '0111', and: '0000', or: '1001', xor: '1001', carry: 0 },
+            { a: '1001', b: '0010', suma: '1011', resta: '0111', and: '0000', or: '1011', xor: '1011', carry: 0 },
+            { a: '1010', b: '0101', suma: '1111', resta: '0101', and: '0000', or: '1111', xor: '1111', carry: 0 },
+            { a: '1011', b: '0011', suma: '1110', resta: '1000', and: '0011', or: '1011', xor: '1000', carry: 0 },
+            { a: '1100', b: '0100', suma: '0000', resta: '1000', and: '0100', or: '1100', xor: '1000', carry: 1 },
+            { a: '1101', b: '0101', suma: '0010', resta: '1000', and: '0101', or: '1101', xor: '1000', carry: 1 },
+            { a: '1110', b: '0110', suma: '0100', resta: '1000', and: '0110', or: '1110', xor: '1000', carry: 1 },
+            { a: '1111', b: '1111', suma: '1110', resta: '0000', and: '1111', or: '1111', xor: '0000', carry: 1 }
+        ];
+
+        // ================================================================
+        // 6. FÓRMULAS
+        // ================================================================
+        const FORMULAS = [
+            { op: 'SUMA', expr: 'S = A ⊕ B ⊕ Cin   |   Cout = A·B + Cin·(A⊕B)' },
+            { op: 'RESTA', expr: 'S = A ⊕ ¬B ⊕ Cin   |   Cout = A·¬B + Cin·(A⊕¬B)' },
+            { op: 'AND', expr: 'S = A · B' },
+            { op: 'OR', expr: 'S = A + B' },
+            { op: 'XOR', expr: 'S = A ⊕ B' },
+            { op: 'NOT', expr: 'S = ¬A' },
+            { op: 'NAND', expr: 'S = ¬(A · B)' },
+            { op: 'NOR', expr: 'S = ¬(A + B)' }
+        ];
+
+        // ================================================================
+        // 7. SIMULADOR (UI)
+        // ================================================================
+        class ALUSimulator {
+            constructor() {
+                this.canvas = document.getElementById('circuitCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.alu = new ALU4Bit();
+
+                this.aBits = [0, 0, 0, 0];
+                this.bBits = [0, 0, 0, 0];
+                this.selBits = [0, 0, 0];
+                this.result = [0, 0, 0, 0];
+                this.flags = { carry: 0, overflow: 0, zero: 0, negative: 0, unsigned: 0, signed: 0 };
+
+                this.animating = false;
+                this.animationTimer = null;
+                this.currentOp = 0;
+
+                this.initUI();
+                this.updateCircuit();
+                this.renderFormulas();
+                this.generateTruthTable();
+            }
+
+            initUI() {
+                const aContainer = document.getElementById('aBits');
+                for (let i = 0; i < 4; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'bit-toggle';
+                    div.innerHTML = `
+                        <input type="checkbox" id="a${i}">
+                        <label class="switch off" for="a${i}">0</label>
+                        <span class="bit-label">A${3-i}</span>
+                    `;
+                    const input = div.querySelector('input');
+                    input.addEventListener('change', () => {
+                        this.aBits[3 - i] = input.checked ? 1 : 0;
+                        this.updateBitDisplay('a', 3 - i);
+                        this.updateCircuit();
+                    });
+                    aContainer.appendChild(div);
+                }
+
+                const bContainer = document.getElementById('bBits');
+                for (let i = 0; i < 4; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'bit-toggle';
+                    div.innerHTML = `
+                        <input type="checkbox" id="b${i}">
+                        <label class="switch off" for="b${i}">0</label>
+                        <span class="bit-label">B${3-i}</span>
+                    `;
+                    const input = div.querySelector('input');
+                    input.addEventListener('change', () => {
+                        this.bBits[3 - i] = input.checked ? 1 : 0;
+                        this.updateBitDisplay('b', 3 - i);
+                        this.updateCircuit();
+                    });
+                    bContainer.appendChild(div);
+                }
+
+                const selContainer = document.getElementById('selBits');
+                for (let i = 0; i < 3; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'bit-toggle';
+                    div.innerHTML = `
+                        <input type="checkbox" id="sel${i}">
+                        <label class="switch off" for="sel${i}">0</label>
+                        <span class="bit-label">S${2-i}</span>
+                    `;
+                    const input = div.querySelector('input');
+                    input.addEventListener('change', () => {
+                        this.selBits[2 - i] = input.checked ? 1 : 0;
+                        this.updateBitDisplay('sel', 2 - i);
+                        this.updateCircuit();
+                    });
+                    selContainer.appendChild(div);
+                }
+
+                const resultContainer = document.getElementById('resultBits');
+                for (let i = 0; i < 4; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'result-bit off';
+                    div.id = `resultBit${i}`;
+                    div.textContent = '0';
+                    resultContainer.appendChild(div);
+                }
+
+                const flagsContainer = document.getElementById('flagsContainer');
+                const flagNames = [
+                    { key: 'carry', label: 'Carry', color: '#ff4444' },
+                    { key: 'overflow', label: 'Overflow', color: '#ff8800' },
+                    { key: 'zero', label: 'Zero', color: '#44ff44' },
+                    { key: 'negative', label: 'Negative', color: '#4488ff' }
+                ];
+                for (const flag of flagNames) {
+                    const div = document.createElement('div');
+                    div.className = 'flag-item';
+                    div.innerHTML = `
+                        <span class="flag-name" style="color:${flag.color}">${flag.label}</span>
+                        <span class="flag-status off" id="flag${flag.key}">OFF</span>
+                    `;
+                    flagsContainer.appendChild(div);
+                }
+
+                document.getElementById('btnAnimate').addEventListener('click', () => this.toggleAnimation());
+                document.getElementById('btnSimulate').addEventListener('click', () => this.updateCircuit());
+                document.getElementById('btnExport').addEventListener('click', () => this.exportCanvas());
+                document.getElementById('btnReset').addEventListener('click', () => this.resetAll());
+                document.getElementById('btnTruthTable').addEventListener('click', () => this.showTruthTable());
+
+                // Botón para tabla completa
+                document.getElementById('btnFullTable').addEventListener('click', () => this.generarTablaCompleta());
+
+                document.getElementById('closeTruthTable').addEventListener('click', () => {
+                    document.getElementById('truthTableOverlay').classList.remove('active');
+                });
+                document.getElementById('truthTableOverlay').addEventListener('click', (e) => {
+                    if (e.target === e.currentTarget) {
+                        document.getElementById('truthTableOverlay').classList.remove('active');
+                    }
+                });
+
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('mouseleave', () => {
+                    document.getElementById('tooltip').style.display = 'none';
+                });
+            }
+
+            updateBitDisplay(type, index) {
+                const prefix = type === 'a' ? 'a' : type === 'b' ? 'b' : 'sel';
+                const container = document.getElementById(`${prefix}Bits`);
+                const items = container.querySelectorAll('.bit-toggle');
+                const realIndex = type === 'a' ? 3 - index : type === 'b' ? 3 - index : 2 - index;
+                const item = items[realIndex];
+                const input = item.querySelector('input');
+                const label = item.querySelector('.switch');
+                const bits = type === 'a' ? this.aBits : type === 'b' ? this.bBits : this.selBits;
+                const val = bits[index];
+                input.checked = val === 1;
+                label.textContent = val;
+                label.className = `switch ${val ? 'on' : 'off'}`;
+            }
+
+            updateCircuit() {
+                this.alu.setInputs(this.aBits, this.bBits, this.selBits);
+                const [result, flags] = this.alu.compute();
+                this.result = result;
+                this.flags = flags;
+                this.currentOp = (this.selBits[0] << 2) | (this.selBits[1] << 1) | this.selBits[2];
+
+                for (let i = 0; i < 4; i++) {
+                    const el = document.getElementById(`resultBit${i}`);
+                    el.textContent = result[i];
+                    el.className = `result-bit ${result[i] ? 'on' : 'off'}`;
+                }
+
+                document.getElementById('resultUnsigned').textContent = flags.unsigned;
+                document.getElementById('resultSigned').textContent = `${flags.signed} (con signo)`;
+
+                const flagMap = { carry: 'carry', overflow: 'overflow', zero: 'zero', negative: 'negative' };
+                for (const [key, id] of Object.entries(flagMap)) {
+                    const el = document.getElementById(`flag${id}`);
+                    const val = flags[key];
+                    el.textContent = val ? 'ON' : 'OFF';
+                    el.className = `flag-status ${val ? 'on' : 'off'}`;
+                }
+
+                this.updateExplanation();
+                this.drawCircuit();
+            }
+
+            updateExplanation() {
+                const content = document.getElementById('explanationContent');
+                const steps = this.alu.getSteps();
+                let html = '';
+                if (steps && steps.length > 0) {
+                    for (const step of steps) {
+                        if (step.includes('Operación:')) html += `<span class="highlight">${step}</span>\n`;
+                        else if (step.includes('Resultado:')) html += `<span class="success">${step}</span>\n`;
+                        else if (step.includes('Bit')) html += `<span class="step">${step}</span>\n`;
+                        else if (step.includes('---')) html += `\n<span class="info">${step}</span>\n`;
+                        else if (step.includes('Carry') || step.includes('Overflow') || step.includes('Zero') || step
+                            .includes('Negative')) {
+                            const isOn = step.includes('ON');
+                            const emoji = isOn ? '✅' : '❌';
+                            const cls = isOn ? 'success' : 'error';
+                            html += `<span class="${cls}">${emoji} ${step}</span>\n`;
+                        } else html += `${step}\n`;
+                    }
+                } else {
+                    html = 'Cambia las entradas para ver la explicación...';
+                }
+                content.innerHTML = html;
+
+                const progress = document.getElementById('progressFill');
+                const totalSteps = steps ? steps.filter(s => s.includes('Bit') || s.includes('Resultado:')).length : 0;
+                const pct = Math.min(100, totalSteps * 10);
+                progress.style.width = `${pct}%`;
+            }
+
+            renderFormulas() {
+                const container = document.getElementById('formulasContainer');
+                let html = '';
+                for (const f of FORMULAS) {
+                    html += `
+                        <div class="formula-item">
+                            <span class="op">${f.op}</span>
+                            <span class="expr">${f.expr}</span>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+            }
+
+            generateTruthTable() {
+                const tbody = document.getElementById('truthTableBody');
+                let html = '';
+                for (const row of TRUTH_TABLE) {
+                    const sumDisplay = row.carry ? `${row.suma} <span class="carry-indicator">(Carry=1)</span>` : row.suma;
+                    html += `
+                        <tr>
+                            <td>${row.a}</td>
+                            <td>${row.b}</td>
+                            <td>${sumDisplay}</td>
+                            <td>${row.resta}</td>
+                            <td>${row.and}</td>
+                            <td>${row.or}</td>
+                            <td>${row.xor}</td>
+                        </tr>
+                    `;
+                }
+                tbody.innerHTML = html;
+            }
+
+            showTruthTable() {
+                document.getElementById('truthTableOverlay').classList.add('active');
+            }
+
+            // ============================================================
+            // TABLA COMPLETA (256 COMBINACIONES) - CORREGIDA
+            // ============================================================
+            generarTablaCompleta() {
+                const container = document.getElementById('fullTableContainer');
+                const content = document.getElementById('fullTableContent');
+
+                container.style.display = 'block';
+
+                let html = '<table>';
+                // Cabecera
+                html += `<thead>
+                    <tr>
+                        <th>A</th>
+                        <th>B</th>
+                        <th style="color:#00ff88;">SUMA</th>
+                        <th style="color:#ff6666;">C</th>
+                        <th style="color:#ff8800;">V</th>
+                        <th style="color:#44ff44;">Z</th>
+                        <th style="color:#4488ff;">N</th>
+                        <th style="color:#ffaa44;">RESTA</th>
+                        <th style="color:#ff6666;">C</th>
+                        <th style="color:#ff8800;">V</th>
+                        <th style="color:#44ff44;">Z</th>
+                        <th style="color:#4488ff;">N</th>
+                        <th style="color:#44ff44;">AND</th>
+                        <th style="color:#44ddff;">OR</th>
+                        <th style="color:#ff44ff;">XOR</th>
+                        <th style="color:#ff8844;">NOT A</th>
+                    </tr>
+                </thead><tbody>`;
+
+                for (let a = 0; a < 16; a++) {
+                    for (let b = 0; b < 16; b++) {
+                        const aBin = a.toString(2).padStart(4, '0');
+                        const bBin = b.toString(2).padStart(4, '0');
+
+                        // --- SUMA ---
+                        const suma = (a + b) & 0xF;
+                        const sumaBin = suma.toString(2).padStart(4, '0');
+                        const carrySum = (a + b) >> 4;
+                        // Overflow SUMA: (A+ y B+ dan -) o (A- y B- dan +)
+                        const overflowSum = (((a & 0x8) && (b & 0x8) && !(suma & 0x8)) || (!(a & 0x8) && !(b & 0x8) && (suma & 0x8))) ? 1 : 0;
+                        const zeroSum = (suma === 0) ? 1 : 0;
+                        const negSum = (suma & 0x8) ? 1 : 0;
+
+                        // --- RESTA ---
+                        const resta = (a - b + 16) & 0xF;
+                        const restaBin = resta.toString(2).padStart(4, '0');
+                        // Carry en resta: 1 si A >= B, 0 si A < B (sin borrow)
+                        const carryRest = (a >= b) ? 1 : 0;
+                        // Overflow RESTA: (A+ y B- dan -) o (A- y B+ dan +)
+                        const overflowRest = (((a & 0x8) && !(b & 0x8) && !(resta & 0x8)) || (!(a & 0x8) && (b & 0x8) && (resta & 0x8))) ? 1 : 0;
+                        const zeroRest = (resta === 0) ? 1 : 0;
+                        const negRest = (resta & 0x8) ? 1 : 0;
+
+                        // Lógicas
+                        const andVal = a & b;
+                        const orVal = a | b;
+                        const xorVal = a ^ b;
+                        const notA = (~a) & 0xF;
+
+                        const andBin = andVal.toString(2).padStart(4, '0');
+                        const orBin = orVal.toString(2).padStart(4, '0');
+                        const xorBin = xorVal.toString(2).padStart(4, '0');
+                        const notBin = notA.toString(2).padStart(4, '0');
+
+                        const rowBg = (carrySum === 1) ? ' style="background:#2a1a1a;"' : '';
+
+                        html += `<tr${rowBg}>
+                            <td>${aBin}</td>
+                            <td>${bBin}</td>
+                            <td style="color:#00ff88;">${sumaBin}</td>
+                            <td style="color:${carrySum?'#ff6666':'#666'};">${carrySum}</td>
+                            <td style="color:${overflowSum?'#ff8800':'#666'};">${overflowSum}</td>
+                            <td style="color:${zeroSum?'#44ff44':'#666'};">${zeroSum}</td>
+                            <td style="color:${negSum?'#4488ff':'#666'};">${negSum}</td>
+                            <td style="color:#ffaa44;">${restaBin}</td>
+                            <td style="color:${carryRest?'#ff6666':'#666'};">${carryRest}</td>
+                            <td style="color:${overflowRest?'#ff8800':'#666'};">${overflowRest}</td>
+                            <td style="color:${zeroRest?'#44ff44':'#666'};">${zeroRest}</td>
+                            <td style="color:${negRest?'#4488ff':'#666'};">${negRest}</td>
+                            <td style="color:#44ff44;">${andBin}</td>
+                            <td style="color:#44ddff;">${orBin}</td>
+                            <td style="color:#ff44ff;">${xorBin}</td>
+                            <td style="color:#ff8844;">${notBin}</td>
+                        </tr>`;
+                    }
+                }
+
+                html += '</tbody></table>';
+                content.innerHTML = html;
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            // ============================================================
+            // DIBUJO DEL CIRCUITO
+            // ============================================================
+            drawCircuit() {
+                const ctx = this.ctx;
+                const W = this.canvas.width;
+                const H = this.canvas.height;
+                ctx.clearRect(0, 0, W, H);
+                const grad = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, 600);
+                grad.addColorStop(0, '#151530');
+                grad.addColorStop(1, '#0a0a18');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, W, H);
+
+                ctx.strokeStyle = 'rgba(42, 58, 94, 0.15)';
+                ctx.lineWidth = 0.5;
+                for (let x = 0; x < W; x += 40) { ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, H);
+                    ctx.stroke(); }
+                for (let y = 0; y < H; y += 40) { ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(W, y);
+                    ctx.stroke(); }
+
+                const pos = {
+                    aX: 35,
+                    aY: 40,
+                    bX: 35,
+                    bY: 105,
+                    selX: 35,
+                    selY: 170,
+                    adderX: 150,
+                    adderY: 30,
+                    gateX: 290,
+                    gateY: 30,
+                    muxX: 470,
+                    muxY: 40,
+                    resultX: 640,
+                    resultY: 70,
+                    flagX: 640,
+                    flagY: 200,
+                };
+
+                const isArith = (this.currentOp === 0 || this.currentOp === 1);
+                const isLogic = (this.currentOp >= 2 && this.currentOp <= 7);
+
+                this.drawConnection(ctx, pos.aX + 150, pos.aY + 12, pos.adderX, pos.adderY + 10, isArith ? '#00ff88' :
+                    '#334455', isArith ? 2.5 : 1);
+                this.drawConnection(ctx, pos.bX + 150, pos.bY + 12, pos.adderX, pos.adderY + 30, isArith ? '#44ddff' :
+                    '#334455', isArith ? 2.5 : 1);
+                this.drawConnection(ctx, pos.adderX + 100, pos.adderY + 20, pos.muxX, pos.muxY + 10, isArith ? '#ffaa44' :
+                    '#334455', isArith ? 2.5 : 1);
+                this.drawConnection(ctx, pos.gateX + 130, pos.gateY + 20, pos.muxX, pos.muxY + 30, isLogic ? '#66ff66' :
+                    '#334455', isLogic ? 2.5 : 1);
+                this.drawConnection(ctx, pos.muxX + 140, pos.muxY + 50, pos.resultX, pos.resultY + 20, '#ffff00', 2.5);
+
+                this.drawInputSection(ctx, 'A', this.aBits, pos.aX, pos.aY, '#00ff88');
+                this.drawInputSection(ctx, 'B', this.bBits, pos.bX, pos.bY, '#44ddff');
+                this.drawInputSection(ctx, 'SEL', this.selBits, pos.selX, pos.selY, '#ff8800');
+                this.drawAdderBlock(ctx, pos.adderX, pos.adderY, isArith);
+                this.drawGatesBlock(ctx, pos.gateX, pos.gateY, isLogic);
+                this.drawMuxBlock(ctx, pos.muxX, pos.muxY);
+                this.drawResultBlock(ctx, pos.resultX, pos.resultY);
+                this.drawFlagsBlock(ctx, pos.flagX, pos.flagY);
+
+                ctx.fillStyle = '#00ff88';
+                ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('ALU — 4 BITS', W / 2, 18);
+                ctx.font = '9px "Segoe UI", Arial, sans-serif';
+                ctx.fillStyle = '#88aacc';
+                ctx.fillText('Unidad Aritmético Lógica', W / 2, 33);
+
+                const opName = this.alu.getOperationName();
+                ctx.textAlign = 'left';
+                ctx.font = 'bold 11px "Courier New", monospace';
+                ctx.fillStyle = '#ffaa66';
+                ctx.fillText(`OP: ${opName}`, W - 170, 18);
+                ctx.font = '9px "Courier New", monospace';
+                ctx.fillStyle = '#88aacc';
+                ctx.fillText(`A=${this.aBits.join('')}  B=${this.bBits.join('')}  SEL=${this.selBits.join('')}`, W - 170,
+                    35);
+
+                ctx.font = '8px "Segoe UI", Arial, sans-serif';
+                ctx.fillStyle = '#445566';
+                ctx.textAlign = 'left';
+                ctx.fillText('─── Datos', 10, H - 8);
+                ctx.fillStyle = '#ffaa44';
+                ctx.fillText('─── Control', 80, H - 8);
+                ctx.fillStyle = '#ffff00';
+                ctx.fillText('─── Resultado', 170, H - 8);
+            }
+
+            drawInputSection(ctx, label, bits, x, y, color) {
+                ctx.textAlign = 'left';
+                ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
+                ctx.fillStyle = color;
+                ctx.fillText(`${label}:`, x, y + 5);
+                for (let i = 0; i < bits.length; i++) {
+                    const bx = x + 40 + i * 32,
+                        by = y - 8,
+                        val = bits[i];
+                    const grad = ctx.createRadialGradient(bx, by, 2, bx, by, 13);
+                    if (val) { grad.addColorStop(0, '#66ffbb');
+                        grad.addColorStop(1, '#00cc77'); } else { grad.addColorStop(0, '#555577');
+                        grad.addColorStop(1, '#333355'); }
+                    ctx.beginPath();
+                    ctx.arc(bx, by, 13, 0, Math.PI * 2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                    ctx.strokeStyle = val ? color : '#444466';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px "Courier New", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(val, bx, by);
+                    ctx.fillStyle = '#88aacc';
+                    ctx.font = '8px "Segoe UI", Arial, sans-serif';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(`${label}${bits.length - 1 - i}`, bx, by + 16);
+                }
+            }
+
+            drawAdderBlock(ctx, x, y, active) {
+                const borderColor = active ? '#6666ff' : '#334455';
+                const textColor = active ? '#ffaa44' : '#445566';
+                ctx.textAlign = 'center';
+                ctx.font = '9px "Segoe UI", Arial, sans-serif';
+                ctx.fillStyle = textColor;
+                ctx.fillText('SUMADOR (RCA 4b)', x + 65, y - 10);
+                const grad = ctx.createLinearGradient(x, y, x + 130, y + 50);
+                grad.addColorStop(0, active ? '#1a1a3e' : '#111122');
+                grad.addColorStop(1, active ? '#0a0a2e' : '#080818');
+                ctx.fillStyle = grad;
+                ctx.shadowColor = active ? '#4444aa' : '#222244';
+                ctx.shadowBlur = active ? 15 : 5;
+                ctx.fillRect(x, y, 130, 50);
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = active ? 2 : 1;
+                ctx.strokeRect(x, y, 130, 50);
+                const states = this.alu.getAdderStates();
+                for (let i = 0; i < 4; i++) {
+                    const fx = x + 5 + i * 30,
+                        fy = y + 5,
+                        s = states[i] || {};
+                    ctx.fillStyle = active ? '#222255' : '#1a1a33';
+                    ctx.fillRect(fx, fy, 25, 20);
+                    ctx.strokeStyle = active ? '#6666ff' : '#334455';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(fx, fy, 25, 20);
+                    ctx.fillStyle = active ? '#88bbff' : '#556688';
+                    ctx.font = '7px "Courier New", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`FA${i}`, fx + 12, fy + 10);
+                    if (s.sum !== undefined && active) {
+                        ctx.fillStyle = '#88ff88';
+                        ctx.font = '6px "Courier New", monospace';
+                        ctx.textBaseline = 'top';
+                        ctx.fillText(`${s.a}${s.b}${s.cin}→${s.sum}${s.cout}`, fx + 12, fy + 22);
+                    }
+                }
+                const carryVal = this.flags.carry;
+                ctx.fillStyle = active ? '#ffaa44' : '#445566';
+                ctx.font = '7px "Courier New", monospace';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText('Cin→0', x + 5, y + 35);
+                ctx.fillStyle = carryVal ? '#ff6666' : '#445566';
+                ctx.fillText(`Cout→${carryVal}`, x + 80, y + 35);
+                ctx.strokeStyle = carryVal ? '#ff4444' : '#334455';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 4]);
+                ctx.beginPath();
+                ctx.moveTo(x + 5, y + 40);
+                ctx.lineTo(x + 125, y + 40);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                if (carryVal) {
+                    ctx.fillStyle = '#ff6666';
+                    ctx.font = '8px "Segoe UI", Arial, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText('▶ CARRY!', x + 128, y + 36);
+                }
+            }
+
+            drawGatesBlock(ctx, x, y, active) {
+                ctx.textAlign = 'center';
+                ctx.font = '9px "Segoe UI", Arial, sans-serif';
+                ctx.fillStyle = active ? '#66ff66' : '#334455';
+                ctx.fillText('COMPUERTAS', x + 60, y - 10);
+                const gates = ['AND', 'OR', 'XOR', 'NOT', 'NAND', 'NOR'];
+                const colors = ['#44ff44', '#44ddff', '#ff44ff', '#ff8844', '#ff4444', '#ffaa00'];
+                for (let i = 0; i < gates.length; i++) {
+                    const gx = x,
+                        gy = y + 5 + i * 28;
+                    const isActive = active && (i === this.currentOp - 2);
+                    const grad = ctx.createLinearGradient(gx, gy, gx + 120, gy + 22);
+                    grad.addColorStop(0, isActive ? '#2a4a2a' : '#1a2a1a');
+                    grad.addColorStop(1, isActive ? '#1a3a1a' : '#0a1a0a');
+                    ctx.fillStyle = grad;
+                    ctx.shadowColor = isActive ? '#44ff44' : '#224422';
+                    ctx.shadowBlur = isActive ? 20 : 5;
+                    ctx.fillRect(gx, gy, 120, 22);
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = isActive ? colors[i] : '#334455';
+                    ctx.lineWidth = isActive ? 2 : 1;
+                    ctx.strokeRect(gx, gy, 120, 22);
+                    ctx.fillStyle = isActive ? colors[i] : '#445566';
+                    ctx.font = isActive ? 'bold 8px "Courier New", monospace' : '8px "Courier New", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(gates[i], gx + 60, gy + 11);
+                    const allResults = this.alu.getAllResults();
+                    if (allResults[i]) {
+                        const res = allResults[i].join('');
+                        ctx.fillStyle = isActive ? '#88ff88' : '#445566';
+                        ctx.font = '7px "Courier New", monospace';
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'top';
+                        ctx.fillText(res, gx + 118, gy + 2);
+                    }
+                }
+            }
+
+            drawMuxBlock(ctx, x, y) {
+                ctx.textAlign = 'center';
+                ctx.font = '9px "Segoe UI", Arial, sans-serif';
+                ctx.fillStyle = '#ffaa00';
+                ctx.fillText('MUX 8:1', x + 65, y - 10);
+                const grad = ctx.createLinearGradient(x, y, x + 130, y + 100);
+                grad.addColorStop(0, '#2a1a4a');
+                grad.addColorStop(1, '#1a0a3a');
+                ctx.fillStyle = grad;
+                ctx.shadowColor = '#8844ff';
+                ctx.shadowBlur = 15;
+                ctx.fillRect(x, y, 130, 100);
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#aa66ff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, 130, 100);
+                for (let i = 0; i < 8; i++) {
+                    const ix = x - 12,
+                        iy = y + 8 + i * 11;
+                    const isSelected = (i === this.currentOp);
+                    ctx.beginPath();
+                    ctx.arc(ix, iy, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = isSelected ? '#ffaa44' : '#555577';
+                    ctx.fill();
+                    ctx.strokeStyle = isSelected ? '#ff8800' : '#444466';
+                    ctx.lineWidth = isSelected ? 2 : 1;
+                    ctx.stroke();
+                    ctx.fillStyle = isSelected ? '#ffaa44' : '#aa88ff';
+                    ctx.font = isSelected ? 'bold 6px "Courier New", monospace' : '6px "Courier New", monospace';
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`D${i}`, ix - 8, iy);
+                }
+                const selText = `SEL: ${this.selBits.join('')}`;
+                ctx.fillStyle = '#ff8800';
+                ctx.font = '8px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(selText, x + 65, y + 102);
+                const ox = x + 145,
+                    oy = y + 50,
+                    outVal = this.result[0] || 0;
+                ctx.beginPath();
+                ctx.arc(ox, oy, 8, 0, Math.PI * 2);
+                ctx.fillStyle = outVal ? '#00ff88' : '#555577';
+                ctx.fill();
+                ctx.strokeStyle = outVal ? '#00ff88' : '#444466';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 9px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(outVal, ox, oy);
+                ctx.fillStyle = '#ffaa00';
+                ctx.font = '7px "Segoe UI", Arial, sans-serif';
+                ctx.textBaseline = 'top';
+                ctx.fillText('OUT', ox, oy + 10);
+            }
+
+            drawResultBlock(ctx, x, y) {
+                ctx.textAlign = 'center';
+                ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
+                ctx.fillStyle = '#ffff00';
+                ctx.fillText('RESULTADO', x + 70, y - 10);
+                for (let i = 0; i < 4; i++) {
+                    const rx = x + i * 38,
+                        ry = y + 5,
+                        val = this.result[i] || 0;
+                    const grad = ctx.createRadialGradient(rx + 19, ry + 18, 2, rx + 19, ry + 18, 18);
+                    if (val) { grad.addColorStop(0, '#66ffbb');
+                        grad.addColorStop(1, '#00cc77'); } else { grad.addColorStop(0, '#555577');
+                        grad.addColorStop(1, '#333355'); }
+                    ctx.beginPath();
+                    ctx.arc(rx + 19, ry + 18, 18, 0, Math.PI * 2);
+                    ctx.fillStyle = grad;
+                    ctx.shadowColor = val ? '#00ff88' : '#333355';
+                    ctx.shadowBlur = val ? 20 : 5;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = val ? '#00ff88' : '#444466';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 14px "Courier New", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(val, rx + 19, ry + 18);
+                    ctx.fillStyle = '#88aacc';
+                    ctx.font = '7px "Segoe UI", Arial, sans-serif';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(`R${3-i}`, rx + 19, ry + 38);
+                }
+                const dec = this.flags.unsigned;
+                ctx.fillStyle = '#ffff00';
+                ctx.font = 'bold 13px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(`= ${dec}`, x + 70, y + 62);
+            }
+
+            drawFlagsBlock(ctx, x, y) {
+                ctx.textAlign = 'left';
+                ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
+                ctx.fillStyle = '#00ff88';
+                ctx.fillText('🚩 FLAGS', x, y - 10);
+                const flags = [
+                    { key: 'carry', label: 'Carry (C)', color: '#ff4444' },
+                    { key: 'overflow', label: 'Overflow (V)', color: '#ff8800' },
+                    { key: 'zero', label: 'Zero (Z)', color: '#44ff44' },
+                    { key: 'negative', label: 'Negative (N)', color: '#4488ff' }
+                ];
+                for (let i = 0; i < flags.length; i++) {
+                    const fy = y + 5 + i * 30,
+                        val = this.flags[flags[i].key];
+                    ctx.fillStyle = flags[i].color;
+                    ctx.font = '9px "Courier New", monospace';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(flags[i].label, x, fy + 8);
+                    const sx = x + 90;
+                    const grad = ctx.createLinearGradient(sx, fy, sx + 50, fy + 22);
+                    if (val) { grad.addColorStop(0, '#00ff88');
+                        grad.addColorStop(1, '#00cc77'); } else { grad.addColorStop(0, '#333355');
+                        grad.addColorStop(1, '#222244'); }
+                    ctx.fillStyle = grad;
+                    ctx.shadowColor = val ? '#00ff88' : '#333355';
+                    ctx.shadowBlur = val ? 15 : 3;
+                    ctx.fillRect(sx, fy, 50, 22);
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = val ? '#00ff88' : '#444466';
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeRect(sx, fy, 50, 22);
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 9px "Courier New", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(val ? 'ON' : 'OFF', sx + 25, fy + 11);
+                }
+            }
+
+            drawConnection(ctx, x1, y1, x2, y2, color, width = 1.5) {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = width > 1.5 ? 12 : 4;
+                const midX = (x1 + x2) / 2;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.bezierCurveTo(midX, y1, midX, y2, x2, y2);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                if (Math.abs(x2 - x1) > 20) {
+                    const angle = Math.atan2(y2 - y1, x2 - x1);
+                    const arrowSize = 6;
+                    const ax = x2 - 8 * Math.cos(angle);
+                    const ay = y2 - 8 * Math.sin(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(x2, y2);
+                    ctx.lineTo(ax - arrowSize * Math.sin(angle), ay + arrowSize * Math.cos(angle));
+                    ctx.moveTo(x2, y2);
+                    ctx.lineTo(ax + arrowSize * Math.sin(angle), ay - arrowSize * Math.cos(angle));
+                    ctx.stroke();
+                }
+            }
+
+            // ============================================================
+            // ANIMACIÓN
+            // ============================================================
+            toggleAnimation() {
+                const btn = document.getElementById('btnAnimate');
+                if (this.animating) {
+                    this.animating = false;
+                    if (this.animationTimer) { clearInterval(this.animationTimer);
+                        this.animationTimer = null; }
+                    btn.textContent = '▶ Animar';
+                    btn.classList.remove('active');
+                    this.drawCircuit();
+                } else {
+                    this.animating = true;
+                    btn.textContent = '⏹ Detener';
+                    btn.classList.add('active');
+                    this.animateCircuit();
+                }
+            }
+
+            animateCircuit() {
+                if (!this.animating) return;
+                this.drawCircuit();
+                const colors = ['#00ff88', '#ff8800', '#ff4488', '#4488ff', '#ffff00', '#ff00ff'];
+                const ctx = this.ctx;
+                const numDots = (this.currentOp >= 2 && this.currentOp <= 7) ? 4 : 6;
+                for (let i = 0; i < numDots; i++) {
+                    const x = 200 + i * 80;
+                    const y = 250 + Math.sin(Date.now() * 0.002 + i * 1.5) * 15;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = colors[i % colors.length];
+                    ctx.shadowColor = colors[i % colors.length];
+                    ctx.shadowBlur = 25;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+                for (let i = 0; i < 4; i++) {
+                    if (this.result[i]) {
+                        const el = document.getElementById(`resultBit${i}`);
+                        el.style.transition = 'none';
+                        el.style.transform = 'scale(1.3)';
+                        setTimeout(() => {
+                            el.style.transition = 'transform 0.3s ease';
+                            el.style.transform = 'scale(1)';
+                        }, 100);
+                    }
+                }
+                this.animationTimer = setTimeout(() => this.animateCircuit(), 600);
+            }
+
+            // ============================================================
+            // EXPORTAR
+            // ============================================================
+            exportCanvas() {
+                try {
+                    const link = document.createElement('a');
+                    link.download = 'alu_circuit.png';
+                    link.href = this.canvas.toDataURL('image/png');
+                    link.click();
+                    const content = document.getElementById('explanationContent');
+                    const oldHtml = content.innerHTML;
+                    content.innerHTML = '<span class="success">✅ Circuito exportado como imagen!</span>\n' + oldHtml;
+                    setTimeout(() => { content.innerHTML = oldHtml; }, 3000);
+                } catch (e) { alert('Error al exportar: ' + e.message); }
+            }
+
+            // ============================================================
+            // RESET
+            // ============================================================
+            resetAll() {
+                if (this.animating) this.toggleAnimation();
+                this.aBits = [0, 0, 0, 0];
+                this.bBits = [0, 0, 0, 0];
+                this.selBits = [0, 0, 0];
+                for (let i = 0; i < 4; i++) {
+                    this.updateBitDisplay('a', i);
+                    this.updateBitDisplay('b', i);
+                    if (i < 3) this.updateBitDisplay('sel', i);
+                }
+                this.result = [0, 0, 0, 0];
+                this.flags = { carry: 0, overflow: 0, zero: 0, negative: 0, unsigned: 0, signed: 0 };
+                this.updateCircuit();
+                document.getElementById('explanationContent').innerHTML = '🔄 Sistema reiniciado.';
+                document.getElementById('progressFill').style.width = '0%';
+            }
+
+            // ============================================================
+            // TOOLTIP
+            // ============================================================
+            handleMouseMove(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left,
+                    y = e.clientY - rect.top;
+                const tooltip = document.getElementById('tooltip');
+                let found = false,
+                    text = '';
+                if (x > 35 && x < 180) {
+                    if (y > 32 && y < 55) { text = '🔵 Entrada A: Bits A3-A0';
+                        found = true; } else if (y > 97 && y < 120) { text = '🟢 Entrada B: Bits B3-B0';
+                        found = true; } else if (y > 162 && y < 185) { text = '🟠 Selector: SEL2-SEL0 (3 bits)';
+                        found = true; }
+                }
+                if (x > 150 && x < 280 && y > 20 && y < 80) { text = '📐 Sumador RCA de 4 bits con acarreo';
+                    found = true; }
+                if (x > 290 && x < 410 && y > 20 && y < 175) { text = '🔧 Compuertas lógicas: AND, OR, XOR, NOT, NAND, NOR';
+                    found = true; }
+                if (x > 470 && x < 600 && y > 30 && y < 140) { text = '🎛️ Multiplexor 8:1 selecciona la operación';
+                    found = true; }
+                if (x > 640 && x < 790 && y > 60 && y < 120) { text = `📊 Resultado: ${this.result.join('')} = ${this.flags.unsigned} (sin signo) / ${this.flags.signed} (con signo)`;
+                    found = true; }
+                if (x > 640 && x < 790 && y > 190 && y < 260) { text = '🚩 Banderas: Carry, Overflow, Zero, Negative';
+                    found = true; }
+                if (found) {
+                    tooltip.textContent = text;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.clientX + 15) + 'px';
+                    tooltip.style.top = (e.clientY - 10) + 'px';
+                } else { tooltip.style.display = 'none'; }
+            }
+        }
+
+        // ================================================================
+        // INICIALIZAR
+        // ================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const simulator = new ALUSimulator();
+            window.simulator = simulator;
+        });
+    </script>
+</body>
+</html>
